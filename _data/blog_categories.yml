@@ -1,0 +1,18 @@
+
+- name: "Development"
+  slug: "development"
+
+- name: "CTF & Wargame"
+  slug: "ctf-wargame"
+
+- name: "Bug Bounty"
+  slug: "bug-bounty"
+
+- name: "Technical Writing"
+  slug: "technical-writing"
+
+- name: "Research & Conferences"
+  slug: "research-conferences"
+
+- name: "Competitions & Certifications"
+  slug: "competitions-certifications"
