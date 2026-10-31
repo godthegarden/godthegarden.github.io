@@ -20,7 +20,7 @@ permalink: /categories/
         {% endif %}
       {% endfor %}
 
-      <a href="{{ '/category/' | append: category.slug | append: '/' | relative_url }}"
+      <a href="{{ '/categories/' | append: category.slug | append: '/' | relative_url }}"
          class="d-flex justify-content-between align-items-center px-3 py-3 text-decoration-none">
 
         <span>
