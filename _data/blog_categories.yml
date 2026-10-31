@@ -1,4 +1,3 @@
-
 - name: "Development"
   slug: "development"
 
@@ -14,5 +13,5 @@
 - name: "Research & Conferences"
   slug: "research-conferences"
 
-- name: "Competitions & Certifications"
-  slug: "competitions-certifications"
+- name: "Activities"
+  slug: "activities"

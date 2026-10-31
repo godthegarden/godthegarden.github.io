@@ -20,7 +20,9 @@ permalink: /categories/
         {% endif %}
       {% endfor %}
 
-      <div class="d-flex justify-content-between align-items-center px-3 py-2">
+      <a href="{{ '/category/' | append: category.slug | append: '/' | relative_url }}"
+         class="d-flex justify-content-between align-items-center px-3 py-3 text-decoration-none">
+
         <span>
           <i class="fas fa-folder me-2"></i>
           {{ category.name }}
@@ -28,8 +30,10 @@ permalink: /categories/
 
         <span class="text-muted">
           {{ matching_posts.size }}
+          <i class="fas fa-chevron-right ms-2"></i>
         </span>
-      </div>
+
+      </a>
 
       {% unless forloop.last %}
         <hr class="my-1">
