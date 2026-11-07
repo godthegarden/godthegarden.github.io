@@ -1,0 +1,336 @@
+<div class="theme-switcher" data-theme-toggle>
+  <button
+    type="button"
+    class="theme-trigger"
+    aria-label="Choose color theme"
+    aria-haspopup="true"
+    aria-expanded="false"
+    title="Change theme"
+    data-theme-trigger
+  >
+    <svg
+      class="theme-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+    </svg>
+  </button>
+
+  <div class="theme-menu" data-theme-menu hidden>
+    <button type="button" data-theme-option="light">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+      </svg>
+      <span>Light</span>
+      <span class="check">✓</span>
+    </button>
+
+    <button type="button" data-theme-option="dark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" aria-hidden="true">
+        <path d="M20.98 13.02A9 9 0 0 1 10.98 3.02 9 9 0 1 0 20.98 13.02Z" />
+      </svg>
+      <span>Dark</span>
+      <span class="check">✓</span>
+    </button>
+
+    <button type="button" data-theme-option="system">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="13" rx="2" />
+        <path d="M8 21h8m-4-4v4" />
+      </svg>
+      <span>System</span>
+      <span class="check">✓</span>
+    </button>
+  </div>
+</div>
+
+<script>
+  type Theme = 'light' | 'dark' | 'system';
+
+  const storageKey = 'godthegarden-theme';
+
+  const systemQuery = window.matchMedia(
+    '(prefers-color-scheme: dark)'
+  );
+
+  function readPreference(): Theme {
+    try {
+      const stored = localStorage.getItem(storageKey);
+
+      if (
+        stored === 'light' ||
+        stored === 'dark' ||
+        stored === 'system'
+      ) {
+        return stored;
+      }
+    } catch {
+      // Storage may be unavailable.
+    }
+
+    return 'system';
+  }
+
+  function applyTheme(): void {
+    const preference = readPreference();
+
+    const resolved =
+      preference === 'system'
+        ? (systemQuery.matches ? 'dark' : 'light')
+        : preference;
+
+    document.documentElement.dataset.theme = resolved;
+    document.documentElement.dataset.themePreference =
+      preference;
+
+    document.querySelectorAll<HTMLElement>(
+      '[data-theme-toggle]'
+    ).forEach((container) => {
+      const trigger =
+        container.querySelector<HTMLButtonElement>(
+          '[data-theme-trigger]'
+        );
+
+      if (trigger) {
+        trigger.setAttribute(
+          'title',
+          `Theme: ${preference}`
+        );
+      }
+
+      container.querySelectorAll<HTMLButtonElement>(
+        '[data-theme-option]'
+      ).forEach((button) => {
+        const selected =
+          button.dataset.themeOption === preference;
+
+        button.setAttribute(
+          'aria-pressed',
+          String(selected)
+        );
+      });
+    });
+  }
+
+  function closeMenus(): void {
+    document.querySelectorAll<HTMLElement>(
+      '[data-theme-toggle]'
+    ).forEach((container) => {
+      const menu =
+        container.querySelector<HTMLElement>(
+          '[data-theme-menu]'
+        );
+
+      const trigger =
+        container.querySelector<HTMLButtonElement>(
+          '[data-theme-trigger]'
+        );
+
+      if (menu) menu.hidden = true;
+      if (trigger) {
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  function setupThemeToggle(): void {
+    applyTheme();
+
+    document.querySelectorAll<HTMLElement>(
+      '[data-theme-toggle]'
+    ).forEach((container) => {
+      const trigger =
+        container.querySelector<HTMLButtonElement>(
+          '[data-theme-trigger]'
+        );
+
+      const menu =
+        container.querySelector<HTMLElement>(
+          '[data-theme-menu]'
+        );
+
+      if (!trigger || !menu) return;
+
+      trigger.onclick = () => {
+        const shouldOpen = menu.hidden;
+
+        closeMenus();
+
+        menu.hidden = !shouldOpen;
+
+        trigger.setAttribute(
+          'aria-expanded',
+          String(shouldOpen)
+        );
+      };
+
+      menu.querySelectorAll<HTMLButtonElement>(
+        '[data-theme-option]'
+      ).forEach((button) => {
+        button.onclick = () => {
+          const value =
+            button.dataset.themeOption as Theme;
+
+          try {
+            localStorage.setItem(storageKey, value);
+          } catch {
+            // Theme still applies for the current page.
+          }
+
+          const resolved =
+            value === 'system'
+              ? (systemQuery.matches ? 'dark' : 'light')
+              : value;
+
+          document.documentElement.dataset.theme =
+            resolved;
+
+          document.documentElement.dataset.themePreference =
+            value;
+
+          applyTheme();
+          closeMenus();
+        };
+      });
+    });
+  }
+
+  document.addEventListener(
+    'astro:page-load',
+    setupThemeToggle
+  );
+
+  document.addEventListener(
+    'astro:after-swap',
+    applyTheme
+  );
+
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+
+    if (
+      target instanceof Node &&
+      !target.parentElement?.closest('[data-theme-toggle]') &&
+      !(target instanceof Element &&
+        target.closest('[data-theme-toggle]'))
+    ) {
+      closeMenus();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeMenus();
+    }
+  });
+
+  systemQuery.addEventListener('change', () => {
+    if (readPreference() === 'system') {
+      applyTheme();
+    }
+  });
+
+  setupThemeToggle();
+</script>
+
+<style>
+  .theme-switcher {
+    position: relative;
+    z-index: 30;
+  }
+
+  .theme-trigger {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .theme-trigger:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+
+  .theme-icon {
+    width: 17px;
+    height: 17px;
+  }
+
+  .theme-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    z-index: 50;
+    width: 166px;
+    padding: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 12px 35px #00000030;
+  }
+
+  .theme-menu[hidden] {
+    display: none;
+  }
+
+  .theme-menu button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 10px;
+    padding: 10px;
+    background: transparent;
+    color: var(--text-primary);
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .theme-menu button:hover {
+    background: var(--bg-hover);
+  }
+
+  .theme-menu svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .theme-menu .check {
+    margin-left: auto;
+    color: var(--accent);
+    visibility: hidden;
+  }
+
+  .theme-menu button[aria-pressed="true"] .check {
+    visibility: visible;
+  }
+
+  .theme-trigger:focus-visible,
+  .theme-menu button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+</style>

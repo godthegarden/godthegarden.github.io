@@ -1,0 +1,102 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+
+  return posts.map((post) => ({
+    params: { id: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<BaseLayout title={post.data.title}>
+  <article class="post">
+    <a class="back" href="/">← Home</a>
+
+    <header class="post-header">
+      <p class="category">{post.data.category}</p>
+      <h1>{post.data.title}</h1>
+      <time datetime={post.data.publishedAt.toISOString()}>
+        {post.data.publishedAt.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          timeZone: 'UTC',
+        })}
+      </time>
+    </header>
+
+    <div class="post-content">
+      <Content />
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .post {
+    max-width: 850px;
+    min-height: 100svh;
+    margin: 0 auto;
+    padding: clamp(30px, 6vw, 90px);
+  }
+
+  .back {
+    color: #a6bad7;
+    font-size: 14px;
+  }
+
+  .post-header {
+    margin: 80px 0 65px;
+    border-bottom: 1px solid #393d43;
+    padding-bottom: 36px;
+  }
+
+  .category {
+    font-family: monospace;
+    color: #a6bad7;
+    text-transform: uppercase;
+    font-size: 12px;
+  }
+
+  h1 {
+    font-size: clamp(38px, 5vw, 68px);
+    letter-spacing: -0.05em;
+    line-height: 1.15;
+    margin: 18px 0;
+  }
+
+  time {
+    color: #969da7;
+    font-size: 13px;
+  }
+
+  .post-content {
+    color: #c5c9ce;
+    font-size: 17px;
+    line-height: 1.85;
+    overflow-wrap: anywhere;
+  }
+
+  .post-content :global(a) {
+    color: #a6bad7;
+    text-decoration: underline;
+  }
+
+  .post-content :global(pre) {
+    overflow-x: auto;
+    padding: 20px;
+    background: #242830;
+    border-radius: 6px;
+  }
+
+  .post-content :global(img) {
+    max-width: 100%;
+    height: auto;
+  }
+</style>

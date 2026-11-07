@@ -1,0 +1,93 @@
+---
+import ThemeToggle from './ThemeToggle.astro';
+
+interface Props {
+  page?: string;
+}
+
+const { page = '' } = Astro.props;
+---
+
+<header class="topbar">
+  <a class="home-link" href="/" aria-label="Go to Home">
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m3 10 9-7 9 7" />
+      <path d="M5 9v12h14V9" />
+      <path d="M9 21v-8h6v8" />
+    </svg>
+
+    <span>Home</span>
+  </a>
+
+  <div class="header-actions">
+    {page && <span class="header-label">{page}</span>}
+    <ThemeToggle />
+  </div>
+</header>
+
+<style>
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    min-height: 36px;
+  }
+
+  .home-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: color 0.2s ease;
+  }
+
+  .home-link:hover {
+    color: var(--accent);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .header-label {
+    font-family: monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    text-align: right;
+  }
+
+  @media (max-width: 600px) {
+    .header-actions {
+      gap: 10px;
+    }
+
+    .header-label {
+      font-size: 10px;
+      max-width: 135px;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-link {
+      transition: none;
+    }
+  }
+</style>

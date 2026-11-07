@@ -1,0 +1,243 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import { categories } from '../../data/categories';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const { categories } = await import('../../data/categories');
+  const { getCollection } = await import('astro:content');
+
+  const posts = await getCollection(
+    'blog',
+    ({ data }) => !data.draft
+  );
+
+  return categories.map((category) => ({
+    params: {
+      slug: category.slug,
+    },
+
+    props: {
+      category,
+
+      posts: posts
+        .filter((post) => post.data.category === category.key)
+        .sort(
+          (a, b) =>
+            b.data.publishedAt.getTime() -
+            a.data.publishedAt.getTime()
+        ),
+    },
+  }));
+}
+
+const { category, posts } = Astro.props;
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+---
+
+<BaseLayout title={category.name}>
+  <section class="shell category-page">
+    <Header page={`CATEGORY / ${category.short.toUpperCase()}`} />
+
+    <div class="heading">
+      <p class="eyebrow">
+        EXPLORE / {category.short.toUpperCase()}
+      </p>
+
+      <h1 class="category-title">{category.name}</h1>
+
+      <p class="post-total">
+        {posts.length}
+        {' '}
+        {posts.length === 1 ? 'post' : 'posts'}
+      </p>
+    </div>
+
+    <section
+      class="post-section"
+      aria-label={`${category.name} posts`}
+    >
+      {
+        posts.length > 0 ? (
+          <div class="post-list">
+            {posts.map((post) => (
+              <a
+                class="post-item"
+                href={`/posts/${post.id}/`}
+              >
+                <div class="post-details">
+                  <h2>{post.data.title}</h2>
+
+                  {post.data.description && (
+                    <p class="description">
+                      {post.data.description}
+                    </p>
+                  )}
+
+                  <time datetime={post.data.publishedAt.toISOString()}>
+                    {formatDate(post.data.publishedAt)}
+                  </time>
+                </div>
+
+                <span class="post-arrow" aria-hidden="true">↗</span>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div class="empty-state">
+            <p>No posts yet.</p>
+            <span>New writing will appear here.</span>
+          </div>
+        )
+      }
+    </section>
+
+    <footer class="footer category-footer">
+      <a href="/categories/">← All Categories</a>
+      <a href="/archive/">Archive ↗</a>
+    </footer>
+  </section>
+</BaseLayout>
+
+<style>
+  .category-page {
+    background: #202329;
+  }
+
+  .heading {
+    padding: clamp(60px, 9vh, 110px) 0 50px;
+  }
+
+  .heading .eyebrow {
+    margin: 0 0 16px;
+  }
+
+  .category-title {
+    margin: 0;
+    color: #f0f0ed;
+    font-size: clamp(36px, 4.5vw, 66px);
+    font-weight: 600;
+    letter-spacing: -0.055em;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .post-total {
+    margin: 22px 0 0;
+    color: #a6bad7;
+    font-family: monospace;
+    font-size: 13px;
+  }
+
+  .post-section {
+    flex: 1;
+  }
+
+  .post-list {
+    border-top: 1px solid #444a53;
+  }
+
+  .post-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 28px;
+    padding: 26px 0;
+    border-bottom: 1px solid #444a53;
+    transition: color 0.2s ease;
+  }
+
+  .post-item:hover {
+    color: #a6bad7;
+  }
+
+  .post-item:focus-visible {
+    outline: 2px solid #a6bad7;
+    outline-offset: 4px;
+  }
+
+  .post-details {
+    min-width: 0;
+  }
+
+  .post-details h2 {
+    margin: 0;
+    font-size: clamp(18px, 1.8vw, 24px);
+    font-weight: 500;
+    line-height: 1.45;
+  }
+
+  .description {
+    margin: 10px 0 0;
+    color: #a4a9b0;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  time {
+    display: block;
+    margin-top: 15px;
+    color: #919ba8;
+    font-size: 12px;
+  }
+
+  .post-arrow {
+    color: #a6bad7;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .empty-state {
+    border-top: 1px solid #444a53;
+    padding: 50px 0;
+  }
+
+  .empty-state p {
+    margin: 0 0 10px;
+    color: #e5e7eb;
+    font-size: 20px;
+  }
+
+  .empty-state span {
+    color: #a4a9b0;
+    font-size: 14px;
+  }
+
+  .category-footer {
+    margin-top: 55px;
+  }
+
+  @media (max-width: 650px) {
+    .heading {
+      padding: 50px 0 38px;
+    }
+
+    .category-title {
+      font-size: clamp(34px, 8vw, 50px);
+    }
+
+    .post-item {
+      padding: 22px 0;
+      gap: 16px;
+    }
+
+    .category-footer {
+      margin-top: 40px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .post-item {
+      transition: none;
+    }
+  }
+</style>

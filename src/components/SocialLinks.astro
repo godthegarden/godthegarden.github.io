@@ -1,0 +1,152 @@
+---
+interface Props {
+  variant?: 'icons' | 'labeled';
+  showRSS?: boolean;
+}
+
+const {
+  variant = 'icons',
+  showRSS = true,
+} = Astro.props;
+
+const links = [
+  {
+    name: 'GitHub',
+    href: 'https://github.com/godthegarden',
+    external: true,
+    type: 'github',
+  },
+  {
+    name: 'Email',
+    href: 'mailto:jungwonshin0825@gmail.com',
+    external: false,
+    type: 'email',
+  },
+  ...(showRSS
+    ? [
+        {
+          name: 'RSS',
+          href: '/rss.xml',
+          external: false,
+          type: 'rss',
+        },
+      ]
+    : []),
+];
+---
+
+<nav
+  class:list={['social-links', variant]}
+  aria-label="Social links"
+>
+  {
+    links.map((link) => (
+      <a
+        href={link.href}
+        aria-label={link.name}
+        title={link.name}
+        target={link.external ? '_blank' : undefined}
+        rel={link.external ? 'noopener noreferrer' : undefined}
+      >
+        {link.type === 'github' && (
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.16c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.74.4-1.25.74-1.54-2.57-.29-5.27-1.29-5.27-5.69 0-1.26.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.16 1.18a11 11 0 0 1 5.74 0c2.2-1.49 3.15-1.18 3.15-1.18.63 1.58.24 2.75.12 3.04.74.8 1.18 1.82 1.18 3.08 0 4.41-2.7 5.4-5.29 5.69.42.36.79 1.06.79 2.14v3.16c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .5Z" />
+          </svg>
+        )}
+
+        {link.type === 'email' && (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="2.5" y="4.5" width="19" height="15" rx="2" />
+            <path d="m3.5 6 8.5 7 8.5-7" />
+          </svg>
+        )}
+
+        {link.type === 'rss' && (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="5" cy="19" r="1.5" fill="currentColor" stroke="none" />
+            <path d="M4 11a9 9 0 0 1 9 9" />
+            <path d="M4 4a16 16 0 0 1 16 16" />
+          </svg>
+        )}
+
+        {variant === 'labeled' && <span>{link.name}</span>}
+      </a>
+    ))
+  }
+</nav>
+
+<style>
+  .social-links {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .social-links a {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    min-width: 42px;
+    min-height: 42px;
+    color: #aeb8c6;
+    background: #252a31;
+    border: 1px solid #414852;
+    border-radius: 6px;
+
+    transition:
+      color 0.2s ease,
+      border-color 0.2s ease,
+      background 0.2s ease;
+  }
+
+  .social-links a:hover {
+    color: #f0f0ed;
+    border-color: #869dbb;
+    background: #333b46;
+  }
+
+  .social-links a:focus-visible {
+    outline: 2px solid #a6bad7;
+    outline-offset: 3px;
+  }
+
+  .social-links svg {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+  }
+
+  .labeled {
+    gap: 14px;
+  }
+
+  .labeled a {
+    min-height: 44px;
+    padding: 0 15px;
+    font-size: 14px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .social-links a {
+      transition: none;
+    }
+  }
+</style>

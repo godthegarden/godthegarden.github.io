@@ -1,0 +1,237 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import CategoryIcon from '../../components/CategoryIcon.astro';
+import { categories } from '../../data/categories';
+import { getCollection } from 'astro:content';
+
+const posts = await getCollection(
+  'blog',
+  ({ data }) => !data.draft
+);
+
+const categoryItems = categories.map((category) => ({
+  ...category,
+  count: posts.filter(
+    (post) => post.data.category === category.key
+  ).length,
+}));
+---
+
+<BaseLayout title="Categories">
+  <section class="shell categories">
+    <Header page="CATEGORIES" />
+
+    <div class="heading">
+      <p class="eyebrow">EXPLORE / TOPICS</p>
+      <h1 class="page-title">Explore by topic.</h1>
+    </div>
+
+    <div class="category-grid">
+      {
+        categoryItems.map((category) => (
+          <a
+            class="category-card"
+            href={`/categories/${category.slug}/`}
+            aria-label={`${category.name}, ${category.count} posts`}
+          >
+            <div class="icon" aria-hidden="true">
+              <CategoryIcon type={category.slug} />
+            </div>
+
+            <div class="card-bottom">
+              <div class="card-label">
+                <small>
+                  {category.short.toUpperCase()}
+                </small>
+
+                <h2>{category.name}</h2>
+              </div>
+
+              <span class="post-count">
+                {category.count}
+                {' '}
+                {category.count === 1 ? 'post' : 'posts'}
+              </span>
+            </div>
+          </a>
+        ))
+      }
+    </div>
+
+    <footer class="footer">
+      <a href="/">← Back to Home</a>
+      <span>GODTHEGARDEN</span>
+    </footer>
+  </section>
+</BaseLayout>
+
+<style>
+  .categories {
+    background: #202329;
+    padding:
+      clamp(24px, 3vw, 48px)
+      clamp(24px, 5vw, 80px);
+  }
+
+  /* HEADING */
+
+  .heading {
+    padding-top: clamp(32px, 5vh, 55px);
+    padding-bottom: clamp(45px, 7vh, 75px);
+  }
+
+  .heading .eyebrow {
+    margin: 0 0 14px;
+  }
+
+  .heading .page-title {
+    margin: 0;
+    font-size: clamp(36px, 4vw, 62px);
+    line-height: 1.06;
+    letter-spacing: -0.055em;
+    font-weight: 600;
+  }
+
+  /* GRID */
+
+  .category-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: minmax(195px, auto);
+    gap: 14px;
+    align-content: start;
+    margin-bottom: 35px;
+  }
+
+  /* CARD */
+
+  .category-card {
+    min-width: 0;
+    min-height: 195px;
+    padding: 23px;
+    background: #2b3038;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 18px;
+
+    transition:
+      background 0.25s ease,
+      transform 0.25s ease;
+  }
+
+  .category-card:hover {
+    background: #373e48;
+    transform: translateY(-3px);
+  }
+
+  .category-card:focus-visible {
+    outline: 2px solid var(--link-hover);
+    outline-offset: 3px;
+  }
+
+  /* SVG ICON */
+
+  .icon {
+    width: clamp(58px, 5.6vw, 88px);
+    height: clamp(58px, 5.6vw, 88px);
+    color: var(--accent);
+    transition:
+      color 0.2s ease,
+      transform 0.25s ease;
+  }
+
+  .category-card:hover .icon {
+    color: var(--link-hover);
+    transform: translateY(-3px);
+  }
+
+  /* TEXT */
+
+  .card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 12px;
+  }
+
+  .card-label {
+    min-width: 0;
+  }
+
+  .card-label small {
+    display: block;
+    color: #9ba7b8;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    line-height: 1.4;
+  }
+
+  .card-label h2 {
+    margin: 6px 0 0;
+    color: var(--text-primary);
+    font-size: clamp(16px, 1.45vw, 21px);
+    font-weight: 500;
+    line-height: 1.3;
+    overflow-wrap: break-word;
+  }
+
+  .post-count {
+    color: var(--accent);
+    font-family: monospace;
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* RESPONSIVE */
+
+  @media (max-width: 1000px) {
+    .card-bottom {
+      align-items: start;
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
+
+  @media (max-width: 800px) {
+    .category-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 560px) {
+    .heading {
+      padding-top: 45px;
+      padding-bottom: 45px;
+    }
+
+    .heading .page-title {
+      font-size: clamp(34px, 9vw, 48px);
+    }
+
+    .category-grid {
+      grid-template-columns: 1fr;
+      grid-auto-rows: auto;
+    }
+
+    .category-card {
+      min-height: 185px;
+    }
+
+    .card-bottom {
+      flex-direction: row;
+      align-items: end;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .category-card,
+    .icon {
+      transition: none;
+    }
+  }
+</style>

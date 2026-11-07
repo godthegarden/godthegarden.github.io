@@ -1,0 +1,447 @@
+---
+interface Props {
+  scene?: 'saturn' | 'earth' | 'blackhole' | 'meteors' | 'stars';
+}
+
+const { scene = 'stars' } = Astro.props;
+const pathname = Astro.url.pathname;
+
+function hashString(value: string): number {
+  let hash = 2166136261;
+  for (const char of value) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createRandom(seed: number) {
+  let state = seed;
+  return () => {
+    state += 0x6d2b79f5;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const random = createRandom(hashString(pathname));
+
+function between(min: number, max: number) {
+  return min + (max - min) * random();
+}
+
+const stars = [
+  ...Array.from({ length: 90 }, () => ({
+    x: between(2, 98),
+    y: between(2, 98),
+    size: between(0.6, 1.4),
+    brightness: between(0.12, 0.30),
+    glow: between(0, 2),
+  })),
+  ...Array.from({ length: 35 }, () => ({
+    x: between(2, 98),
+    y: between(2, 98),
+    size: between(1.1, 2.1),
+    brightness: between(0.25, 0.50),
+    glow: between(2, 5),
+  })),
+  ...Array.from({ length: 16 }, () => ({
+    x: between(3, 97),
+    y: between(3, 97),
+    size: between(1.8, 3.2),
+    brightness: between(0.65, 0.95),
+    glow: between(6, 12),
+  })),
+];
+
+const meteorZones = {
+  saturn: [
+    [54, 15], [66, 28], [81, 16], [92, 39], [77, 50],
+  ],
+  earth: [
+    [52, 14], [66, 24], [80, 16], [92, 38], [75, 54],
+  ],
+  blackhole: [
+    [56, 14], [70, 30], [84, 15], [95, 43], [78, 60],
+  ],
+  meteors: [
+    [54, 13], [66, 24], [79, 15], [92, 37], [76, 50],
+  ],
+  stars: [
+    [56, 14], [68, 25], [82, 15], [93, 37], [78, 54],
+  ],
+};
+
+const meteors = meteorZones[scene].map(([x, y]) => ({
+  x: x + between(-2, 2),
+  y: y + between(-2, 2),
+  length: between(95, 140),
+  angle: between(28, 38),
+  brightness: between(0.50, 0.78),
+}));
+---
+
+<div
+  class:list={['cosmic-backdrop', `scene-${scene}`]}
+  aria-hidden="true"
+>
+  <div class="starfield">
+    {
+      stars.map((star) => (
+        <span
+          class="star"
+          style={`
+            --x:${star.x.toFixed(2)}%;
+            --y:${star.y.toFixed(2)}%;
+            --size:${star.size.toFixed(2)}px;
+            --brightness:${star.brightness.toFixed(2)};
+            --glow:${star.glow.toFixed(2)}px;
+          `}
+        />
+      ))
+    }
+  </div>
+
+  <!-- HOME: SATURN -->
+  {
+    scene === 'saturn' && (
+      <svg class="celestial saturn" viewBox="0 0 400 400">
+        <defs>
+          <radialGradient id="saturn-body" cx="28%" cy="25%" r="85%">
+            <stop offset="0%" stop-color="#C4D0E7" stop-opacity=".72" />
+            <stop offset="55%" stop-color="#7485AC" stop-opacity=".50" />
+            <stop offset="100%" stop-color="#343D63" stop-opacity=".26" />
+          </radialGradient>
+
+          <radialGradient id="saturn-glow">
+            <stop offset="0%" stop-color="#8295CB" stop-opacity=".14" />
+            <stop offset="100%" stop-color="#8295CB" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+
+        <circle cx="200" cy="200" r="180" fill="url(#saturn-glow)" />
+
+        <g transform="rotate(-24 200 200)">
+          <ellipse
+            cx="200" cy="200" rx="156" ry="48"
+            fill="none"
+            stroke="#A5B7D9"
+            stroke-width="1.8"
+            stroke-opacity=".36"
+          />
+          <ellipse
+            cx="200" cy="200" rx="171" ry="56"
+            fill="none"
+            stroke="#A5B7D9"
+            stroke-opacity=".18"
+          />
+        </g>
+
+        <circle cx="200" cy="200" r="65" fill="url(#saturn-body)" />
+
+        <path
+          d="M147 185 Q200 196 253 182 M140 210 Q200 222 260 205"
+          fill="none"
+          stroke="#D1D9E9"
+          stroke-width="6"
+          stroke-opacity=".09"
+        />
+
+        <path
+          d="M58 261 C122 248 180 230 227 209 C295 180 344 152 359 143"
+          fill="none"
+          stroke="#C4D3EC"
+          stroke-width="1.8"
+          stroke-opacity=".51"
+        />
+      </svg>
+    )
+  }
+
+  <!-- CATEGORIES: EARTH -->
+  {
+    scene === 'earth' && (
+      <svg class="celestial earth" viewBox="0 0 400 400">
+        <defs>
+          <radialGradient id="earth-body" cx="30%" cy="27%" r="85%">
+            <stop offset="0%" stop-color="#B1D7ED" stop-opacity=".72" />
+            <stop offset="55%" stop-color="#638DB8" stop-opacity=".46" />
+            <stop offset="100%" stop-color="#273E6B" stop-opacity=".22" />
+          </radialGradient>
+
+          <radialGradient id="earth-glow">
+            <stop offset="0%" stop-color="#7BABDE" stop-opacity=".14" />
+            <stop offset="100%" stop-color="#7BABDE" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+
+        <circle cx="200" cy="200" r="182" fill="url(#earth-glow)" />
+
+        <circle
+          cx="200" cy="200" r="105"
+          fill="url(#earth-body)"
+          stroke="#A1C8E8"
+          stroke-opacity=".32"
+        />
+
+        <path
+          d="M134 132 L166 117 L190 136 L183 158 L202 177 L187 205 L164 218 L145 202 L123 181 Z"
+          fill="#A9D7CB"
+          fill-opacity=".28"
+        />
+
+        <path
+          d="M222 174 L259 155 L288 172 L297 202 L276 216 L271 253 L245 279 L230 253 L239 217 L216 199 Z"
+          fill="#A9D7CB"
+          fill-opacity=".24"
+        />
+
+        <ellipse
+          cx="200" cy="200" rx="105" ry="39"
+          fill="none"
+          stroke="#D2E7F9"
+          stroke-opacity=".12"
+        />
+
+        <circle
+          cx="200" cy="200" r="122"
+          fill="none"
+          stroke="#A4D2F0"
+          stroke-opacity=".12"
+        />
+      </svg>
+    )
+  }
+
+  <!-- ARCHIVE: BLACK HOLE -->
+  {
+    scene === 'blackhole' && (
+      <svg class="celestial blackhole" viewBox="0 0 500 360">
+        <defs>
+          <radialGradient id="blackhole-aura">
+            <stop offset="0%" stop-color="#B18DCE" stop-opacity="0" />
+            <stop offset="56%" stop-color="#B18DCE" stop-opacity="0" />
+            <stop offset="65%" stop-color="#A47FC2" stop-opacity=".36" />
+            <stop offset="76%" stop-color="#8C73AD" stop-opacity=".16" />
+            <stop offset="100%" stop-color="#8C73AD" stop-opacity="0" />
+          </radialGradient>
+
+          <linearGradient id="blackhole-orbit" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#9D87C8" stop-opacity=".72" />
+            <stop offset="35%" stop-color="#B6A0E0" stop-opacity=".85" />
+            <stop offset="70%" stop-color="#9180C0" stop-opacity=".72" />
+            <stop offset="100%" stop-color="#9782BE" stop-opacity=".75" />
+          </linearGradient>
+        </defs>
+
+        <!-- Blurred purple halo -->
+        <circle
+          cx="250" cy="180" r="145"
+          fill="url(#blackhole-aura)"
+        />
+
+        <!-- Black center -->
+        <circle
+          cx="250" cy="180" r="92"
+          fill="#03040A"
+        />
+
+        <!-- One elliptical ring -->
+        <ellipse
+          cx="250" cy="180" rx="229" ry="56"
+          transform="rotate(-21 250 180)"
+          fill="none"
+          stroke="url(#blackhole-orbit)"
+          stroke-width="5"
+          opacity=".84"
+        />
+      </svg>
+    )
+  }
+
+  <!-- PERMANENT METEORS -->
+  <div class="meteor-layer">
+    {
+      meteors.map((meteor) => (
+        <span
+          class="meteor"
+          style={`
+            --x:${meteor.x.toFixed(2)}%;
+            --y:${meteor.y.toFixed(2)}%;
+            --length:${meteor.length.toFixed(2)}px;
+            --angle:${meteor.angle.toFixed(2)}deg;
+            --brightness:${meteor.brightness.toFixed(2)};
+          `}
+        />
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  .cosmic-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .starfield {
+    position: absolute;
+    inset: 0;
+  }
+
+  .star {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: var(--size);
+    height: var(--size);
+    border-radius: 50%;
+    background: #dce8ff;
+    opacity: var(--brightness);
+    box-shadow: 0 0 var(--glow) rgba(196, 220, 255, .95);
+  }
+
+  .celestial {
+    position: absolute;
+    z-index: 1;
+    display: block;
+    height: auto;
+    opacity: .68;
+  }
+
+  .saturn {
+    width: min(28vw, 350px);
+    right: 4%;
+    top: 10%;
+  }
+
+  .earth {
+    width: min(23vw, 290px);
+    right: 7%;
+    top: 8%;
+  }
+
+  .blackhole {
+    width: min(31vw, 400px);
+    right: 4%;
+    top: 11%;
+    opacity: .86;
+    filter: drop-shadow(0 0 14px rgba(169, 130, 200, .12));
+  }
+
+  .meteor-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, .45) 42%,
+      black 68%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, .45) 42%,
+      black 68%
+    );
+  }
+
+  .meteor {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: var(--length);
+    height: 1.5px;
+    border-radius: 999px;
+    opacity: var(--brightness);
+    transform: rotate(var(--angle));
+    transform-origin: right center;
+
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(151, 180, 248, .08) 30%,
+      rgba(173, 204, 255, .62) 82%,
+      rgba(245, 249, 255, .96)
+    );
+
+    filter: drop-shadow(0 0 4px rgba(154, 193, 255, .35));
+  }
+
+  .meteor::after {
+    content: "";
+    position: absolute;
+    right: -2px;
+    top: -2px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #f2f7ff;
+    box-shadow: 0 0 7px rgba(196, 221, 255, .65);
+  }
+
+  /* LIGHT MODE */
+
+  :global(html[data-theme="light"]) .star {
+    background: #596b96;
+    opacity: calc(var(--brightness) * .60);
+  }
+
+  :global(html[data-theme="light"]) .celestial {
+    opacity: .38;
+  }
+
+  :global(html[data-theme="light"]) .meteor {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(130, 127, 205, .10) 30%,
+      rgba(109, 114, 191, .47) 85%,
+      #7176b9
+    );
+  }
+
+  :global(html[data-theme="light"]) .meteor::after {
+    background: #777cc2;
+  }
+
+  @media (max-width: 850px) {
+    .celestial {
+      width: 230px;
+      right: -25px;
+      opacity: .38;
+    }
+
+    .meteor-layer {
+      opacity: .72;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .celestial {
+      width: 170px;
+      right: -60px;
+      opacity: .20;
+    }
+
+    .blackhole {
+      width: 210px;
+      right: -65px;
+    }
+
+    .meteor:nth-child(n + 4) {
+      display: none;
+    }
+
+    .meteor-layer {
+      opacity: .48;
+    }
+  }
+</style>
