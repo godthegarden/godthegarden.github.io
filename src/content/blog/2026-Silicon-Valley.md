@@ -1,4 +1,3 @@
-
 ---
 title: "2026 Silicon Valley SW-AI Leaders"
 description: "My experience exploring the Silicon Valley tech ecosystem."
