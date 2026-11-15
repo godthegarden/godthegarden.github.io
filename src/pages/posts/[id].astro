@@ -12,91 +12,679 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
+
+const toc = headings.filter(
+  (heading) => heading.depth === 2 || heading.depth === 3
+);
+
+const hasToc = toc.length > 0;
+
+const titleLength = Array.from(post.data.title).length;
+const titleSizeClass =
+  titleLength > 48
+    ? 'title-extra-long'
+    : titleLength > 28
+      ? 'title-long'
+      : '';
 ---
 
 <BaseLayout title={post.data.title}>
   <article class="post">
-    <a class="back" href="/">← Home</a>
+    <div class="post-shell">
+      <a class="back" href="/">← Home</a>
 
-    <header class="post-header">
-      <p class="category">{post.data.category}</p>
-      <h1>{post.data.title}</h1>
-      <time datetime={post.data.publishedAt.toISOString()}>
-        {post.data.publishedAt.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          timeZone: 'UTC',
-        })}
-      </time>
-    </header>
+      <header class="post-header">
+        <p class="category">{post.data.category}</p>
 
-    <div class="post-content">
-      <Content />
+        <h1 class={titleSizeClass}>
+          {post.data.title}
+        </h1>
+
+        <time datetime={post.data.publishedAt.toISOString()}>
+          {post.data.publishedAt.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: 'UTC',
+          })}
+        </time>
+      </header>
+
+      <div class:list={['post-layout', !hasToc && 'no-toc']}>
+        <div class="post-content">
+          <Content />
+        </div>
+
+        {
+          hasToc && (
+            <aside class="toc-sidebar" aria-label="Table of contents">
+              <details class="toc-panel" open>
+                <summary class="toc-heading">
+                  ON THIS PAGE
+                  <span class="toc-chevron" aria-hidden="true">⌄</span>
+                </summary>
+
+                <nav class="toc-nav" aria-label="On this page">
+                  <ul>
+                    {toc.map((heading) => (
+                      <li
+                        class:list={[
+                          'toc-item',
+                          heading.depth === 3 && 'toc-subitem',
+                        ]}
+                      >
+                        <a
+                          href={`#${heading.slug}`}
+                          data-heading={heading.slug}
+                        >
+                          {heading.text}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </details>
+            </aside>
+          )
+        }
+      </div>
+
+      <footer class="post-bottom">
+        <p class="bottom-label">KEEP EXPLORING</p>
+
+        <div class="bottom-links">
+          <a href="/archive/" class="bottom-link">
+            <span class="bottom-icon" aria-hidden="true">≡</span>
+
+            <span class="bottom-copy">
+              <span class="bottom-title">All posts</span>
+              <span class="bottom-description">Archive</span>
+            </span>
+
+            <span class="bottom-arrow" aria-hidden="true">↗</span>
+          </a>
+
+          <a href="/categories/" class="bottom-link">
+            <span class="bottom-icon" aria-hidden="true">◇</span>
+
+            <span class="bottom-copy">
+              <span class="bottom-title">Browse categories</span>
+              <span class="bottom-description">All categories</span>
+            </span>
+
+            <span class="bottom-arrow" aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </footer>
     </div>
   </article>
 </BaseLayout>
 
+<script>
+  let tocController: AbortController | undefined;
+
+  function initializePostToc() {
+    tocController?.abort();
+
+    const links = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>(
+        '.toc-nav a[data-heading]'
+      )
+    );
+
+    if (links.length === 0) return;
+
+    const entries = links
+      .map((link) => ({
+        link,
+        element: document.getElementById(link.dataset.heading ?? ''),
+      }))
+      .filter(
+        (entry): entry is {
+          link: HTMLAnchorElement;
+          element: HTMLElement;
+        } => entry.element !== null
+      );
+
+    if (entries.length === 0) return;
+
+    const controller = new AbortController();
+    tocController = controller;
+
+    function updateActiveHeading() {
+      const scrollTop = window.scrollY;
+      const maxScroll = Math.max(
+        0,
+        document.documentElement.scrollHeight - window.innerHeight
+      );
+
+      const atBottom = scrollTop >= maxScroll - 8;
+      const threshold = Math.min(180, window.innerHeight * 0.35);
+
+      let activeIndex = 0;
+
+      for (let i = 0; i < entries.length; i++) {
+        if (entries[i].element.getBoundingClientRect().top <= threshold) {
+          activeIndex = i;
+        }
+      }
+
+      if (atBottom) {
+        activeIndex = entries.length - 1;
+      }
+
+      entries.forEach(({ link }, index) => {
+        const active = index === activeIndex;
+
+        link.classList.toggle('active', active);
+
+        if (active) {
+          link.setAttribute('aria-current', 'location');
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      });
+    }
+
+    window.addEventListener('scroll', updateActiveHeading, {
+      passive: true,
+      signal: controller.signal,
+    });
+
+    window.addEventListener('resize', updateActiveHeading, {
+      passive: true,
+      signal: controller.signal,
+    });
+
+    updateActiveHeading();
+  }
+
+  document.addEventListener('astro:page-load', initializePostToc);
+</script>
+
 <style>
   .post {
-    max-width: 850px;
     min-height: 100svh;
-    margin: 0 auto;
-    padding: clamp(30px, 6vw, 90px);
+    color: var(--text-primary, #ededed);
+    background: var(--bg-post, transparent);
+  }
+
+  .post-shell {
+    width: min(100% - 64px, 1200px);
+    margin-inline: auto;
+    padding-top: clamp(36px, 5vw, 72px);
+    padding-bottom: 100px;
   }
 
   .back {
-    color: #a6bad7;
+    display: inline-block;
+    color: var(--text-secondary, #a6bad7);
     font-size: 14px;
+    text-decoration: none;
+  }
+
+  .back:hover {
+    color: var(--link-hover, #55ff55);
   }
 
   .post-header {
-    margin: 80px 0 65px;
-    border-bottom: 1px solid #393d43;
-    padding-bottom: 36px;
+    margin-top: 75px;
+    margin-bottom: 58px;
+    padding-bottom: 42px;
+    border-bottom: 1px solid var(--border, #393d43);
   }
 
   .category {
+    margin: 0;
     font-family: monospace;
-    color: #a6bad7;
+    color: var(--text-secondary, #a6bad7);
     text-transform: uppercase;
     font-size: 12px;
+    letter-spacing: .06em;
   }
 
-  h1 {
-    font-size: clamp(38px, 5vw, 68px);
-    letter-spacing: -0.05em;
-    line-height: 1.15;
-    margin: 18px 0;
+  .post-header h1 {
+    max-width: 1050px;
+    margin: 22px 0 26px;
+    font-size: clamp(38px, 4.3vw, 64px);
+    font-weight: 750;
+    line-height: 1.25;
+    letter-spacing: -.045em;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+
+  .post-header h1.title-long {
+    font-size: clamp(34px, 3.5vw, 52px);
+  }
+
+  .post-header h1.title-extra-long {
+    font-size: clamp(30px, 3vw, 44px);
   }
 
   time {
-    color: #969da7;
+    color: var(--text-muted, #969da7);
     font-size: 13px;
   }
 
+  /* ARTICLE LAYOUT */
+
+  .post-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 245px;
+    align-items: start;
+    column-gap: clamp(36px, 5vw, 76px);
+  }
+
+  .post-layout.no-toc {
+    grid-template-columns: minmax(0, 850px);
+  }
+
+  /* MARKDOWN */
+
   .post-content {
-    color: #c5c9ce;
+    min-width: 0;
+    color: var(--text-secondary, #c5c9ce);
     font-size: 17px;
-    line-height: 1.85;
-    overflow-wrap: anywhere;
+    line-height: 1.9;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  .post-content :global(h2),
+  .post-content :global(h3),
+  .post-content :global(h4) {
+    color: var(--text-primary, #ededed);
+    font-weight: 700;
+    line-height: 1.4;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    scroll-margin-top: 95px;
+  }
+
+  .post-content :global(h2) {
+    margin: 66px 0 25px;
+    font-size: clamp(25px, 2.3vw, 32px);
+    letter-spacing: -.035em;
+  }
+
+  .post-content :global(h3) {
+    margin: 43px 0 18px;
+    font-size: clamp(20px, 1.8vw, 25px);
+    letter-spacing: -.02em;
+  }
+
+  .post-content :global(h4) {
+    margin: 32px 0 14px;
+    font-size: 19px;
+  }
+
+  .post-content :global(h2:first-child) {
+    margin-top: 0;
+  }
+
+  .post-content :global(p) {
+    margin: 0 0 24px;
+  }
+
+  .post-content :global(ul),
+  .post-content :global(ol) {
+    padding-left: 1.6em;
+    margin: 16px 0 26px;
+  }
+
+  .post-content :global(li) {
+    padding-left: .25em;
+    margin-bottom: 9px;
+  }
+
+  .post-content :global(li::marker) {
+    color: var(--text-muted, #9299a4);
+  }
+
+  .post-content :global(strong) {
+    color: var(--text-primary, #ededed);
+    font-weight: 700;
   }
 
   .post-content :global(a) {
-    color: #a6bad7;
+    color: var(--link-hover, #55ff55);
     text-decoration: underline;
+    text-underline-offset: 4px;
   }
 
-  .post-content :global(pre) {
-    overflow-x: auto;
-    padding: 20px;
-    background: #242830;
-    border-radius: 6px;
+  .post-content :global(blockquote) {
+    margin: 30px 0;
+    padding: 12px 22px;
+    border-left: 3px solid var(--link-hover, #55ff55);
+    background: var(--bg-card, #242830);
+    border-radius: 0 6px 6px 0;
+  }
+
+  .post-content :global(blockquote p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .post-content :global(hr) {
+    border: 0;
+    border-top: 1px solid var(--border, #393d43);
+    margin: 44px 0;
   }
 
   .post-content :global(img) {
+    display: block;
     max-width: 100%;
     height: auto;
+    margin: 32px auto;
+    border-radius: 8px;
+  }
+
+  .post-content :global(pre) {
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 28px 0;
+    padding: 22px;
+    background: var(--bg-card, #242830);
+    border: 1px solid var(--border-soft, #34383f);
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.65;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  .post-content :global(code) {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: .9em;
+  }
+
+  .post-content :global(:not(pre) > code) {
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: var(--bg-card, #242830);
+  }
+
+  .post-content :global(table) {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    margin: 30px 0;
+    border-collapse: collapse;
+  }
+
+  .post-content :global(th),
+  .post-content :global(td) {
+    padding: 12px 15px;
+    border: 1px solid var(--border, #393d43);
+    text-align: left;
+  }
+
+  .post-content :global(th) {
+    color: var(--text-primary, #ededed);
+    background: var(--bg-card, #242830);
+  }
+
+  /* STATIC TOC: NO PROGRESS ANIMATION */
+
+  .toc-sidebar {
+    position: sticky;
+    top: 42px;
+    align-self: start;
+    min-width: 0;
+    max-height: calc(100vh - 84px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .toc-panel {
+    width: 100%;
+  }
+
+  .toc-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 19px;
+    color: var(--text-muted, #969da7);
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .11em;
+    list-style: none;
+    cursor: default;
+  }
+
+  .toc-heading::-webkit-details-marker {
+    display: none;
+  }
+
+  .toc-chevron {
+    display: none;
+  }
+
+  .toc-nav {
+    border-left: 2px solid var(--link-hover, #55ff55);
+  }
+
+  .toc-nav ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .toc-item {
+    margin: 0;
+  }
+
+  .toc-item a {
+    display: block;
+    position: relative;
+    margin-left: -2px;
+    padding: 9px 0 9px 17px;
+    border-left: 2px solid transparent;
+    color: var(--text-muted, #969da7);
+    font-size: 12px;
+    line-height: 1.65;
+    text-decoration: none;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    transition: color .2s ease;
+  }
+
+  .toc-subitem a {
+    padding-left: 31px;
+    font-size: 11.5px;
+  }
+
+  .toc-item a:hover,
+  .toc-item a.active {
+    color: var(--link-hover, #55ff55);
+  }
+
+  .toc-item a.active {
+    border-left-color: var(--link-hover, #55ff55);
+    font-weight: 650;
+  }
+
+  /* BOTTOM NAVIGATION */
+
+  .post-bottom {
+    margin-top: 85px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border, #393d43);
+  }
+
+  .bottom-label {
+    margin: 0 0 20px;
+    color: var(--text-muted, #969da7);
+    font-family: monospace;
+    font-size: 11px;
+    letter-spacing: .12em;
+  }
+
+  .bottom-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .bottom-link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+    padding: 23px;
+    border: 1px solid var(--border, #393d43);
+    border-radius: 9px;
+    background: var(--bg-card, #242830);
+    color: var(--text-primary, #ededed);
+    text-decoration: none;
+    transition: border-color .2s ease, transform .2s ease;
+  }
+
+  .bottom-link:hover {
+    border-color: var(--link-hover, #55ff55);
+    transform: translateY(-2px);
+  }
+
+  .bottom-icon {
+    color: var(--text-muted, #969da7);
+    font-size: 26px;
+    line-height: 1;
+  }
+
+  .bottom-copy {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .bottom-title {
+    font-size: 14px;
+    font-weight: 650;
+  }
+
+  .bottom-description {
+    color: var(--text-muted, #969da7);
+    font-size: 12px;
+  }
+
+  .bottom-arrow {
+    color: var(--text-muted, #969da7);
+    font-size: 19px;
+  }
+
+  .bottom-link:hover .bottom-icon,
+  .bottom-link:hover .bottom-arrow {
+    color: var(--link-hover, #55ff55);
+  }
+
+  /* MOBILE */
+
+  @media (max-width: 900px) {
+    .post-layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 30px;
+    }
+
+    .toc-sidebar {
+      position: static;
+      grid-row: 1;
+      max-height: none;
+      overflow: visible;
+    }
+
+    .toc-panel {
+      padding: 17px 20px;
+      border: 1px solid var(--border, #393d43);
+      border-radius: 8px;
+      background: var(--bg-card, #242830);
+    }
+
+    .toc-heading {
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .toc-chevron {
+      display: inline;
+      font-size: 19px;
+    }
+
+    .toc-panel[open] .toc-chevron {
+      transform: rotate(180deg);
+    }
+
+    .toc-nav {
+      margin-top: 18px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .post-shell {
+      width: calc(100% - 40px);
+      padding-top: 35px;
+      padding-bottom: 80px;
+    }
+
+    .post-header {
+      margin-top: 50px;
+      margin-bottom: 36px;
+      padding-bottom: 30px;
+    }
+
+    .post-header h1,
+    .post-header h1.title-long,
+    .post-header h1.title-extra-long {
+      font-size: clamp(28px, 7vw, 39px);
+      line-height: 1.3;
+    }
+
+    .post-content {
+      font-size: 15.5px;
+      line-height: 1.9;
+    }
+
+    .post-content :global(h2) {
+      font-size: 24px;
+      margin-top: 48px;
+    }
+
+    .post-content :global(h3) {
+      font-size: 20px;
+    }
+
+    .post-content :global(pre) {
+      font-size: 12.5px;
+      padding: 15px;
+    }
+
+    .bottom-links {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .toc-item a,
+    .bottom-link {
+      transition: none;
+    }
+  }
+</style>
+
+<style is:global>
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 </style>

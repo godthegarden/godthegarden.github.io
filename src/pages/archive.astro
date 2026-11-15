@@ -1,217 +1,512 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Header from '../components/Header.astro';
 import { getCollection } from 'astro:content';
+import { categories } from '../data/categories';
 
-const posts = (
-  await getCollection('blog', ({ data }) => !data.draft)
-).sort(
+const posts = (await getCollection(
+  'blog',
+  ({ data }) => !data.draft
+)).sort(
   (a, b) =>
     b.data.publishedAt.getTime() -
     a.data.publishedAt.getTime()
 );
 
-function formatDate(date: Date) {
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
+const categoryMap = new Map(
+  categories.map((category) => [
+    category.key,
+    category.short,
+  ])
+);
+
+const tagCounts = new Map<string, number>();
+const tagLabels = new Map<string, string>();
+
+for (const post of posts) {
+  const uniqueTags = new Set(
+    post.data.tags
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+  );
+
+  for (const tag of uniqueTags) {
+    const key = tag.toLocaleLowerCase();
+
+    tagCounts.set(
+      key,
+      (tagCounts.get(key) ?? 0) + 1
+    );
+
+    if (!tagLabels.has(key)) {
+      tagLabels.set(key, tag);
+    }
+  }
 }
+
+const tags = [...tagCounts.entries()]
+  .map(([key, count]) => ({
+    key,
+    label: tagLabels.get(key) ?? key,
+    count,
+  }))
+  .sort((a, b) =>
+    a.label.localeCompare(b.label, 'en', {
+      sensitivity: 'base',
+    })
+  );
+
+const dateFormat = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: '2-digit',
+  timeZone: 'UTC',
+});
 ---
 
 <BaseLayout title="Archive">
-  <section class="shell archive">
-    <Header page="ARCHIVE" />
+  <main class="archive-page">
+    <div class="archive-shell">
+      <a class="back" href="/">← Home</a>
 
-    <div class="content">
-      <p class="eyebrow">
-        WRITING / ALL POSTS
-      </p>
+      <header class="archive-header">
+        <p class="eyebrow">ALL WRITING</p>
+        <h1>Archive<span class="period">.</span></h1>
+        <p class="archive-description">
+          Notes, projects, experiences, and things learned along the way.
+        </p>
+      </header>
 
-      <h1 class="archive-title">
-        Archive.
-      </h1>
+      <section class="archive-filter" aria-label="Filter posts by tag">
+        <div class="filter-heading">
+          <span>FILTER BY TAG</span>
+          <span class="filter-hint">
+            {tags.length} tags
+          </span>
+        </div>
 
-      <p class="intro">
-        All notes, projects, and experiences in one place.
-      </p>
+        <div class="tag-list" role="group" aria-label="Tags">
+          <button
+            class="tag-button is-active"
+            type="button"
+            data-tag-filter="all"
+            aria-pressed="true"
+          >
+            All
+            <span class="tag-count">{posts.length}</span>
+          </button>
 
-      <div class="post-list">
-        {
-          posts.length > 0 ? (
+          {
+            tags.map((tag) => (
+              <button
+                class="tag-button"
+                type="button"
+                data-tag-filter={tag.key}
+                aria-pressed="false"
+              >
+                {tag.label}
+                <span class="tag-count">
+                  {tag.count}
+                </span>
+              </button>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="archive-results" aria-label="Posts">
+        <div class="results-header">
+          <span>POSTS</span>
+          <span id="visible-count">
+            {posts.length} posts
+          </span>
+        </div>
+
+        <div class="post-list">
+          {
             posts.map((post) => (
               <a
                 class="post-row"
                 href={`/posts/${post.id}/`}
+                data-tags={JSON.stringify(
+                  post.data.tags.map(
+                    (tag) => tag.trim().toLocaleLowerCase()
+                  )
+                )}
               >
                 <time
                   datetime={post.data.publishedAt.toISOString()}
                 >
-                  {formatDate(post.data.publishedAt)}
+                  {dateFormat.format(post.data.publishedAt)}
                 </time>
 
-                <div class="post-info">
-                  <h2>{post.data.title}</h2>
+                <span class="post-title">
+                  {post.data.title}
+                </span>
 
-                  <span class="category">
-                    {post.data.category}
-                  </span>
-                </div>
+                <span class="post-category">
+                  {categoryMap.get(post.data.category)
+                    ?? post.data.category}
+                </span>
 
-                <span class="arrow" aria-hidden="true">
+                <span class="post-arrow" aria-hidden="true">
                   ↗
                 </span>
               </a>
             ))
-          ) : (
-            <p class="empty-state">
-              No published posts yet.
-            </p>
-          )
-        }
-      </div>
+          }
+        </div>
+
+        <p class="empty-state" id="empty-state" hidden>
+          No posts found for this tag.
+        </p>
+      </section>
     </div>
-
-    <footer class="footer">
-      <a href="/">
-        ← Back to Home
-      </a>
-
-      <span>
-        {posts.length}
-        {' '}
-        {posts.length === 1 ? 'post' : 'posts'}
-      </span>
-    </footer>
-  </section>
+  </main>
 </BaseLayout>
 
+<script>
+  function initializeArchiveFilters() {
+    const archive = document.querySelector<HTMLElement>(
+      '.archive-page'
+    );
+
+    if (!archive) return;
+
+    const buttons = Array.from(
+      archive.querySelectorAll<HTMLButtonElement>(
+        '[data-tag-filter]'
+      )
+    );
+
+    const rows = Array.from(
+      archive.querySelectorAll<HTMLElement>(
+        '.post-row[data-tags]'
+      )
+    );
+
+    const count = archive.querySelector<HTMLElement>(
+      '#visible-count'
+    );
+
+    const emptyState = archive.querySelector<HTMLElement>(
+      '#empty-state'
+    );
+
+    function applyFilter(tag: string) {
+      const valid =
+        tag === 'all' ||
+        buttons.some((button) => button.dataset.tagFilter === tag);
+
+      const selected = valid ? tag : 'all';
+
+      buttons.forEach((button) => {
+        const active = button.dataset.tagFilter === selected;
+
+        button.classList.toggle('is-active', active);
+        button.setAttribute(
+          'aria-pressed',
+          String(active)
+        );
+      });
+
+      let visible = 0;
+
+      rows.forEach((row) => {
+        const tags: string[] = JSON.parse(
+          row.dataset.tags ?? '[]'
+        );
+
+        const matches =
+          selected === 'all' || tags.includes(selected);
+
+        row.hidden = !matches;
+
+        if (matches) visible++;
+      });
+
+      if (count) {
+        count.textContent =
+          `${visible} ${visible === 1 ? 'post' : 'posts'}`;
+      }
+
+      if (emptyState) {
+        emptyState.hidden = visible !== 0;
+      }
+    }
+
+    const params = new URLSearchParams(
+      window.location.search
+    );
+
+    applyFilter(
+      (params.get('tag') ?? 'all').toLocaleLowerCase()
+    );
+
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const tag = button.dataset.tagFilter ?? 'all';
+
+        applyFilter(tag);
+
+        const url = new URL(window.location.href);
+
+        if (tag === 'all') {
+          url.searchParams.delete('tag');
+        } else {
+          url.searchParams.set('tag', tag);
+        }
+
+        window.history.replaceState(
+          window.history.state,
+          '',
+          url.toString()
+        );
+      });
+    });
+  }
+
+  document.addEventListener(
+    'astro:page-load',
+    initializeArchiveFilters
+  );
+</script>
+
 <style>
-  /* PAGE */
-
-  .archive {
-    background: #202329;
+  .archive-page {
+    min-height: 100svh;
+    color: var(--text-primary, #ededed);
   }
 
-  .content {
-    flex: 1;
-    padding: 70px 0;
+  .archive-shell {
+    width: min(100% - 64px, 1100px);
+    margin: 0 auto;
+    padding: clamp(36px, 5vw, 72px) 0 110px;
   }
 
-  /* HEADING */
-
-  .archive-title {
-    font-size: clamp(44px, 5vw, 76px);
-    line-height: 1.08;
-    font-weight: 600;
-    letter-spacing: -0.055em;
-    margin: 14px 0 20px;
+  .back {
+    display: inline-block;
+    color: var(--text-secondary, #a6bad7);
+    font-size: 14px;
+    text-decoration: none;
   }
 
-  .intro {
+  .back:hover {
+    color: var(--link-hover, #55ff55);
+  }
+
+  .archive-header {
+    margin: 85px 0 65px;
+  }
+
+  .archive-header .eyebrow {
+    margin: 0 0 16px;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text-muted, #969da7);
+    letter-spacing: .11em;
+  }
+
+  .archive-header h1 {
     margin: 0;
-    color: #a4a9b0;
-    font-size: 16px;
-    line-height: 1.6;
+    font-size: clamp(48px, 6vw, 82px);
+    font-weight: 760;
+    line-height: 1.1;
+    letter-spacing: -.06em;
+  }
+
+  .period {
+    color: var(--text-primary, #ededed);
+  }
+
+  .archive-description {
+    max-width: 540px;
+    margin: 21px 0 0;
+    color: var(--text-secondary, #a6bad7);
+    font-size: 15px;
+    line-height: 1.8;
+  }
+
+  /* TAG FILTER */
+
+  .archive-filter {
+    margin-bottom: 56px;
+  }
+
+  .filter-heading,
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    font-family: monospace;
+    font-size: 11px;
+    letter-spacing: .09em;
+    color: var(--text-muted, #969da7);
+  }
+
+  .filter-heading {
+    margin-bottom: 20px;
+  }
+
+  .filter-hint {
+    letter-spacing: normal;
+  }
+
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .tag-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 14px;
+    border: 1px solid var(--border, #393d43);
+    border-radius: 7px;
+    background: var(--bg-card, #242830);
+    color: var(--text-secondary, #a6bad7);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition:
+      border-color .2s ease,
+      color .2s ease;
+  }
+
+  .tag-button:hover,
+  .tag-button.is-active {
+    color: var(--link-hover, #55ff55);
+    border-color: var(--link-hover, #55ff55);
+  }
+
+  .tag-button.is-active {
+    font-weight: 650;
+  }
+
+  .tag-count {
+    color: var(--text-muted, #969da7);
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: 400;
   }
 
   /* POST LIST */
 
+  .results-header {
+    padding-bottom: 17px;
+    border-bottom: 1px solid var(--border, #393d43);
+  }
+
   .post-list {
-    margin-top: 60px;
-    border-top: 1px solid #444a53;
+    display: flex;
+    flex-direction: column;
   }
 
   .post-row {
     display: grid;
-    grid-template-columns: 150px minmax(0, 1fr) 24px;
+    grid-template-columns: 115px minmax(0, 1fr) 110px 24px;
     align-items: center;
-    gap: 24px;
-
-    padding: 24px 0;
-    border-bottom: 1px solid #444a53;
-
-    transition: color 0.2s ease;
+    gap: 20px;
+    padding: 24px 4px;
+    border-bottom: 1px solid var(--border-soft, #34383f);
+    color: var(--text-primary, #ededed);
+    text-decoration: none;
+    transition: color .2s ease;
   }
 
-  .post-row:hover {
-    color: #a6bad7;
+  .post-row[hidden] {
+    display: none;
   }
 
-  .post-row:focus-visible {
-    outline: 2px solid #a6bad7;
-    outline-offset: 4px;
-  }
-
-  /* DATE */
-
-  time {
-    font-size: 13px;
-    color: #a4a9b0;
+  .post-row time {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text-muted, #969da7);
     white-space: nowrap;
   }
 
-  /* POST DETAILS */
-
-  .post-info {
+  .post-title {
     min-width: 0;
+    font-size: 17px;
+    font-weight: 560;
+    line-height: 1.6;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
-  .post-info h2 {
-    font-size: 19px;
-    line-height: 1.45;
-    font-weight: 500;
-    margin: 0 0 8px;
-  }
-
-  .category {
-    font-family: monospace;
+  .post-category {
     font-size: 12px;
-    color: #a6bad7;
+    color: var(--text-muted, #969da7);
+    text-align: right;
   }
 
-  .arrow {
-    color: #a6bad7;
-    font-size: 19px;
+  .post-arrow {
+    font-size: 17px;
+    color: var(--text-muted, #969da7);
+    text-align: right;
+  }
+
+  .post-row:hover .post-title,
+  .post-row:hover .post-arrow {
+    color: var(--link-hover, #55ff55);
   }
 
   .empty-state {
-    margin: 0;
-    padding: 30px 0;
-    color: #a4a9b0;
+    padding: 45px 0;
+    color: var(--text-muted, #969da7);
     font-size: 14px;
   }
 
-  /* RESPONSIVE */
-
-  @media (max-width: 650px) {
-    .content {
-      padding: 50px 0;
-    }
-
-    .post-list {
-      margin-top: 40px;
-    }
-
-    .post-row {
-      grid-template-columns: minmax(0, 1fr) 24px;
-      gap: 12px;
-    }
-
-    time {
-      grid-column: 1 / -1;
-    }
-
-    .post-info h2 {
-      font-size: 17px;
-    }
+  .empty-state[hidden] {
+    display: none;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  @media (max-width: 700px) {
+    .archive-shell {
+      width: calc(100% - 40px);
+      padding-top: 35px;
+    }
+
+    .archive-header {
+      margin: 58px 0 47px;
+    }
+
+    .archive-filter {
+      margin-bottom: 42px;
+    }
+
     .post-row {
-      transition: none;
+      grid-template-columns: minmax(0, 1fr) 20px;
+      gap: 7px 12px;
+      padding: 21px 2px;
+    }
+
+    .post-row time {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .post-title {
+      grid-column: 1;
+      grid-row: 2;
+      font-size: 15px;
+    }
+
+    .post-category {
+      grid-column: 1;
+      grid-row: 3;
+      text-align: left;
+    }
+
+    .post-arrow {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    .tag-button {
+      padding: 9px 11px;
     }
   }
 </style>
