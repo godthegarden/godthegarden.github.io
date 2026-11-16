@@ -1,3 +1,14 @@
+---
+title: "Personal Reflection | 지금의 나, 그리고 앞으로의 7개월"
+description: "Reflecting on my values, personal growth, and goals for the next seven months."
+publishedAt: 2026-11-15
+category: activities
+tags:
+  - Personal
+  - Reflection
+  - Knights Frontier
+draft: false
+---
 # 경험을 넘어 성장으로, 나의 선택 기준과 앞으로의 7개월
 
 ## 1. 현재 내가 삶과 진로에서 중요하게 생각하는 가치와 선택 기준
