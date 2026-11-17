@@ -1,0 +1,17 @@
+/* Archive: cosmic backdrop stays behind all content */
+
+body:has(.archive-page) .cosmic-backdrop {
+  z-index: 0;
+}
+
+body:has(.archive-page) .archive-page {
+  position: relative;
+  z-index: 1;
+}
+
+body:has(.archive-page) .archive-header,
+body:has(.archive-page) .archive-filter,
+body:has(.archive-page) .archive-results {
+  position: relative;
+  z-index: 1;
+}

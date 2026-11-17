@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { categories } from '../data/categories';
+import '../styles/archive-layer.css';
 
 const posts = (await getCollection(
   'blog',
